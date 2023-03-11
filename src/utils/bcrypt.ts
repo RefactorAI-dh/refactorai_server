@@ -4,19 +4,19 @@ import { JsonDB, Config } from 'node-json-db';
 const db = new JsonDB(
   new Config('database/dev_SocialBridge_Database', true, true)
 );
-const pushToDatabase = async (dataPath, data) => {
+const pushToDatabase = async (dataPath: string, data: string) => {
   return await db.push(dataPath, data);
 };
-const getFromDatabase = async (dataPath) => {
+const getFromDatabase = async (dataPath: string) => {
   return await db.getData(dataPath);
 };
 
-export const saltSecret = (secret, workspace_id) => {
-  bcrypt.genSalt(bcryptSaltRounds, (err, salt) => {
-    bcrypt.hash(secret, salt, async function (err, hash) {
-      if (err) {
-        console.log(err);
-        throw new err();
+export const saltSecret = (secret: string, workspace_id: number) => {
+  bcrypt.genSalt(bcryptSaltRounds, (err: Error | undefined, salt) => {
+    bcrypt.hash(secret, salt, async function (_err: any, hash) {
+      if (_err) {
+        console.log(_err, err);
+        throw new Error(_err);
       }
       console.log('<------------------------->');
       console.log(`Unhashed: ${secret}`);

@@ -1,21 +1,12 @@
 const PORT = process.env.PORT || 3000;
 import express from 'express';
+// @ts-ignore
 import cors from 'cors';
 const app = express();
 import { config } from 'dotenv';
 config();
 // OpenAI setup
-import { Configuration, OpenAIApi } from 'openai';
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-const response = await openai.createCompletion({
-  model: 'text-davinci-003',
-  prompt: 'Say this is a test for Danial Hasan',
-  temperature: 0,
-  max_tokens: 20,
-});
+import _createCompletion from './utils/createCompletion.js';
 app.use(
   cors({
     origin:
@@ -26,7 +17,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static('public'));
 
-app.get('/', async (req, res) => {
+app.get('/', async (_req, res) => {
   res.sendFile(__dirname + '/index.html');
   try {
     res
@@ -34,7 +25,7 @@ app.get('/', async (req, res) => {
       .send(
         'There was an issue with the RefactorAI API. Please try again later.'
       );
-  } catch (error) {
+  } catch (error: any) {
     if (error.body) {
       console.log(error.body);
     } else {
@@ -50,11 +41,20 @@ app.get('/api', async (req, res) => {
     res.status(502).send(error);
   }
 });
-
-app.post('/api', async (req, res) => {
+/**
+ * Receive calls from extension, get response from AI,
+ * return response
+ */
+app.post('/api', async (_req, res) => {
   try {
-    res.send('IT works!');
-    console.log(req.body);
+    const response = await _createCompletion({
+      model: 'gpt-3.5-turbo',
+      prompt: 'Return the following text: `It works! Danial Hasan.`',
+      temperature: 0.5,
+      max_tokens: 30,
+    });
+    console.log('Response: ', response);
+    res.json(response);
   } catch (error) {
     res.status(502).send(error);
   }
