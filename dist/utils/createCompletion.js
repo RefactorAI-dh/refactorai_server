@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,13 +7,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const openai_1 = require("openai");
-const configuration = new openai_1.Configuration({
+import { Configuration, OpenAIApi } from 'openai';
+const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new openai_1.OpenAIApi(configuration);
-function _createCompletion({ model, prompt, temperature, max_tokens, }) {
+const openai = new OpenAIApi(configuration);
+export default function _createCompletion({ model, prompt, temperature, max_tokens, }) {
     return __awaiter(this, void 0, void 0, function* () {
         const response = yield openai.createCompletion({
             model,
@@ -25,5 +23,4 @@ function _createCompletion({ model, prompt, temperature, max_tokens, }) {
         return response;
     });
 }
-exports.default = _createCompletion;
 //# sourceMappingURL=createCompletion.js.map

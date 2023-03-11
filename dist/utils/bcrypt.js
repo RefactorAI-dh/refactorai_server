@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,24 +7,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.saltSecret = void 0;
-const bcrypt_1 = __importDefault(require("bcrypt"));
+import bcrypt from 'bcrypt';
 const bcryptSaltRounds = 10;
-const node_json_db_1 = require("node-json-db");
-const db = new node_json_db_1.JsonDB(new node_json_db_1.Config('database/dev_SocialBridge_Database', true, true));
+import { JsonDB, Config } from 'node-json-db';
+const db = new JsonDB(new Config('database/dev_SocialBridge_Database', true, true));
 const pushToDatabase = (dataPath, data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield db.push(dataPath, data);
 });
 const getFromDatabase = (dataPath) => __awaiter(void 0, void 0, void 0, function* () {
     return yield db.getData(dataPath);
 });
-const saltSecret = (secret, workspace_id) => {
-    bcrypt_1.default.genSalt(bcryptSaltRounds, (err, salt) => {
-        bcrypt_1.default.hash(secret, salt, function (_err, hash) {
+export const saltSecret = (secret, workspace_id) => {
+    bcrypt.genSalt(bcryptSaltRounds, (err, salt) => {
+        bcrypt.hash(secret, salt, function (_err, hash) {
             return __awaiter(this, void 0, void 0, function* () {
                 if (_err) {
                     console.log(_err, err);
@@ -41,5 +35,4 @@ const saltSecret = (secret, workspace_id) => {
         });
     });
 };
-exports.saltSecret = saltSecret;
 //# sourceMappingURL=bcrypt.js.map

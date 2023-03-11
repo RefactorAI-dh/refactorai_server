@@ -22,7 +22,6 @@ export const saltSecret = (secret: string, workspace_id: number) => {
       console.log(`Unhashed: ${secret}`);
       console.log(`Hashed: ${hash}`);
       console.log('<------------------------->');
-
       await pushToDatabase(`/${workspace_id}`, hash);
       console.log(await getFromDatabase('/'));
     });
