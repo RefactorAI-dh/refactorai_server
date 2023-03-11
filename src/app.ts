@@ -54,17 +54,25 @@ const openai = new OpenAIApi(configuration);
 app.post('/api', async (_req, res) => {
   try {
     console.log('POST request received');
-    console.log('OpenAI api key: ', process.env.OPENAI_API_KEY);
     // const response = await _createCompletion({
-    const response = await openai.createCompletion({
-      model: 'text-davinci-002',
-      prompt: 'Return the following text: `It works! Danial Hasan.`',
+    const response = await openai.createChatCompletion({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: `Debug the following code:
+          if(!ture){
+            console.log(hello world!)
+          }
+          `,
+        },
+      ],
       temperature: 0.5,
-      max_tokens: 30,
+      max_tokens: 100,
     });
     // });
     if (response.status !== 200) throw new Error();
-    console.log('Response: ', response.data);
+    console.log(response.data.choices);
     res.send(response.data);
   } catch (error) {
     console.log('ERROR:\n', error);
