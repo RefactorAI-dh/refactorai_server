@@ -1,4 +1,5 @@
 const PORT = process.env.PORT || 3000;
+import { Configuration, OpenAIApi } from 'openai';
 import express from 'express';
 // @ts-ignore
 import cors from 'cors';
@@ -46,34 +47,33 @@ app.get('/api', async (req, res) => {
  * return response
  */
 
-import { Configuration, CreateCompletionRequest, OpenAIApi } from 'openai';
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
-app.post('/api', async (_req, res) => {
+app.post('/api', async (req, res) => {
   try {
     console.log('POST request received');
-    // const response = await _createCompletion({
+    console.log(req.body)
+    /**
+     * The 'role' key helps us structure conversations that the AI can start from.
+     * Messages with the role of 'assistant' are responses that the AI would give us. This helps
+     * us give the AI some context without having to make more than one request.
+     */
     const response = await openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'user',
-          content: `Debug the following code:
-          if(!ture){
-            console.log(hello world!)
-          }
-          `,
+          content:req.body.prompt
         },
       ],
       temperature: 0.5,
       max_tokens: 100,
     });
-    // });
-    if (response.status !== 200) throw new Error();
-    console.log(response.data.choices);
-    res.send(response.data);
+    if (response.status !== 200) { throw new Error(); }
+    console.log(response.data.choices[0]);
+    res.send(response.data.choices[0]);
   } catch (error) {
     console.log('ERROR:\n', error);
     res.status(502).send(error);
