@@ -19,19 +19,11 @@ app.use(express.json());
 app.use(express.static('public'));
 
 app.get('/', async (_req, res) => {
-  res.sendFile(__dirname + '/index.html');
   try {
-    res
-      .status(502)
-      .send(
-        'There was an issue with the RefactorAI API. Please try again later.'
-      );
-  } catch (error: any) {
-    if (error.body) {
-      console.log(error.body);
-    } else {
-      console.log(error);
-    }
+    res.sendFile(__dirname + '/index.html');
+  } catch (error) {
+    console.log(error);
+    res.status(502).send('There was an issue with the RefactorAI API. Please try again later.');
   }
 });
 app.get('/api', async (req, res) => {
@@ -55,6 +47,11 @@ app.post('/api', async (req, res) => {
   try {
     console.log('POST request received');
     console.log(req.body)
+    let currentDate = new Date();
+const day = currentDate.getDate();
+const month = currentDate.getMonth() + 1; // Add 1 because January is 0
+    const year = currentDate.getFullYear();
+    const todaysDate = `${day}/${month}/${year}`
     /**
      * The 'role' key helps us structure conversations that the AI can start from.
      * Messages with the role of 'assistant' are responses that the AI would give us. This helps
@@ -63,13 +60,18 @@ app.post('/api', async (req, res) => {
     const response = await openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages: [
+
+        {
+          role: 'system',
+          content:`You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}` 
+        },
         {
           role: 'user',
           content:req.body.prompt
         },
       ],
       temperature: 0.5,
-      max_tokens: 100,
+      max_tokens: 300,
     });
     if (response.status !== 200) { throw new Error(); }
     console.log(response.data.choices[0]);
