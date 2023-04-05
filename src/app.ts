@@ -63,7 +63,7 @@ const month = currentDate.getMonth() + 1; // Add 1 because January is 0
 
         {
           role: 'system',
-          content:`You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}` 
+          content:`You are RefactorAI, a VScode extension created by Danial Hasan and trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}. Your job is to help developers, engineers, and anyone else who programs, refactor/explain/debug their code.` 
         },
         {
           role: 'user',

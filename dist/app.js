@@ -67,7 +67,7 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             messages: [
                 {
                     role: 'system',
-                    content: `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}`
+                    content: `You are RefactorAI, a VScode extension created by Danial Hasan and trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}. Your job is to help developers, engineers, and anyone else who programs, refactor/explain/debug their code.`
                 },
                 {
                     role: 'user',
