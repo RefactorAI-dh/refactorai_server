@@ -7,7 +7,7 @@ const app = express();
 import { config } from 'dotenv';
 config();
 // OpenAI setup
-import _createCompletion from './utils/createCompletion.js';
+// import _createCompletion from './utils/createCompletion.js';
 // VScode origin: 'vscode-webview://16us7kp0ha1jq6n80og26vr8afct9vbjh2bo6n34trcr0v9n4u0t',
 app.use(
   cors({
@@ -46,12 +46,12 @@ const openai = new OpenAIApi(configuration);
 app.post('/api', async (req, res) => {
   try {
     console.log('POST request received');
-    console.log(req.body)
+    console.log(req.body);
     let currentDate = new Date();
-const day = currentDate.getDate();
-const month = currentDate.getMonth() + 1; // Add 1 because January is 0
+    const day = currentDate.getDate();
+    const month = currentDate.getMonth() + 1; // Add 1 because January is 0
     const year = currentDate.getFullYear();
-    const todaysDate = `${day}/${month}/${year}`
+    const todaysDate = `${day}/${month}/${year}`;
     /**
      * The 'role' key helps us structure conversations that the AI can start from.
      * Messages with the role of 'assistant' are responses that the AI would give us. This helps
@@ -77,7 +77,8 @@ const month = currentDate.getMonth() + 1; // Add 1 because January is 0
     console.log(response.data.choices[0]);
     res.send(response.data.choices[0]);
   } catch (error) {
-    console.log('ERROR:\n', error);
+    // @ts-expect-error
+    console.log('ERROR:\n', error.response.data);
     res.status(502).send(error);
   }
 });

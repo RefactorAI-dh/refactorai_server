@@ -15,6 +15,8 @@ import cors from 'cors';
 const app = express();
 import { config } from 'dotenv';
 config();
+// OpenAI setup
+// import _createCompletion from './utils/createCompletion.js';
 // VScode origin: 'vscode-webview://16us7kp0ha1jq6n80og26vr8afct9vbjh2bo6n34trcr0v9n4u0t',
 app.use(cors({
     origin: '*',
@@ -84,7 +86,8 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.send(response.data.choices[0]);
     }
     catch (error) {
-        console.log('ERROR:\n', error);
+        // @ts-expect-error
+        console.log('ERROR:\n', error.response.data);
         res.status(502).send(error);
     }
 }));
