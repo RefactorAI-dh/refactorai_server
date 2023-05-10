@@ -153,9 +153,7 @@ app.post('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function
                 res.write('data: [DONE] \n\n');
             });
         });
-        if (response.status !== 200) {
-            throw new Error();
-        }
+        // if (response.status !== 200) { throw new Error(); }
     }
     catch (error) {
         console.log('error in POST/api/stream:', error);
