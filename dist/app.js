@@ -51,12 +51,18 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // const headers = {
+    //   'Content-Type': 'text/event-stream',
+    //   'Connection': 'keep-alive',
+    //   'Cache-Control': 'no-cache'
+    // };
+    // res.writeHead(200, headers);
     try {
         console.log('POST request received');
-        console.log(req.body);
-        let currentDate = new Date();
+        console.log('\n\n\nRequest Body: \n', req.body);
+        const currentDate = new Date();
         const day = currentDate.getDate();
-        const month = currentDate.getMonth() + 1; // Add 1 because January is 0
+        const month = currentDate.getMonth() + 1;
         const year = currentDate.getFullYear();
         const todaysDate = `${day}/${month}/${year}`;
         /**
@@ -77,19 +83,98 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 },
             ],
             temperature: 0.5,
-            max_tokens: 300,
+            max_tokens: 3000,
+        });
+        // const collectedChunks = [];
+        // const collectedMessages = [];
+        if (response.status !== 200) {
+            throw new Error();
+        }
+        console.log('\n\n--------------------------------------------------------------');
+        console.log('\nOpenAI Response:', response);
+        res.send(response.data.choices[0]);
+    }
+    catch (error) {
+        console.log('ERROR:\n', error);
+        res.status(502).send(error);
+    }
+}));
+/**
+   * 1. Client establishes EventSource connection to this server.
+   * 2. Server receives request, sends request to OpenAI with stream:true
+   * 3. Forward OpenAI response to client.
+   * 4. On [DONE] from OpenAI, close connection to both servers.
+   */
+app.post('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('Request received: ', req.body);
+    const headers = {
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
+    };
+    res.writeHead(200, headers);
+    try {
+        const prompt = req.body.prompt;
+        const currentDate = new Date();
+        const day = currentDate.getDate();
+        const month = currentDate.getMonth() + 1;
+        const year = currentDate.getFullYear();
+        const todaysDate = `${day}/${month}/${year}`;
+        /**
+         * The 'role' key helps us structure conversations that the AI can start from.
+         * Messages with the role of 'assistant' are responses that the AI would give us. This helps
+         * us give the AI some context without having to make more than one request.
+         */
+        const response = openai.createChatCompletion({
+            model: 'gpt-3.5-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: `You are RefactorAI, a VScode extension created by Danial Hasan and trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}. Your job is to help developers, engineers, and anyone else who programs, refactor/explain/debug their code.`
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                },
+            ],
+            temperature: 0.5,
+            max_tokens: 3000,
+            stream: true
+        }, { responseType: 'stream' });
+        response.then((resp) => {
+            // @ts-expect-error test
+            resp.data.on('data', (chunk) => {
+                console.log('Streamed Chunk: ', chunk);
+                res.write(`data: ${chunk} \n\n`);
+            });
+            // @ts-expect-error test
+            resp.data.on('end', () => {
+                console.log('Streaming Complete');
+                res.write('data: [DONE] \n\n');
+            });
         });
         if (response.status !== 200) {
             throw new Error();
         }
-        console.log(response.data.choices[0]);
-        res.send(response.data.choices[0]);
     }
     catch (error) {
-        // @ts-expect-error
-        console.log('ERROR:\n', error.response.data);
-        res.status(502).send(error);
+        console.log('error in POST/api/stream:', error);
     }
+}));
+app.get('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const headers = {
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
+    };
+    res.writeHead(200, headers);
+    res.write('data: Event stream established! \n\n');
+    const client = {
+        id: Date.now()
+    };
+    req.on('close', () => {
+        console.log(`Client ${client.id} Connection Closed`);
+    });
 }));
 app.listen(PORT, () => __awaiter(void 0, void 0, void 0, function* () {
     console.log(`Server listening on port ${PORT}`);
