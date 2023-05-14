@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 const PORT = process.env.PORT || 3000;
 import { Configuration, OpenAIApi } from 'openai';
 import express from 'express';
-// @ts-ignore
 import cors from 'cors';
 const app = express();
 import { config } from 'dotenv';
@@ -85,7 +84,7 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             temperature: 0.5,
             max_tokens: 3000,
         });
-        // const collectedChunks = [];
+        // const collectedStringChunks = [];
         // const collectedMessages = [];
         if (response.status !== 200) {
             throw new Error();
@@ -107,12 +106,12 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
    */
 app.post('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Request received: ', req.body);
-    const headers = {
-        'Content-Type': 'text/event-stream',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache'
-    };
-    res.writeHead(200, headers);
+    // const headers = {
+    //   'Content-Type': 'text/event-stream',
+    //   'Connection': 'keep-alive',
+    //   'Cache-Control': 'no-cache'
+    // };
+    // res.writeHead(200, headers);
     try {
         const prompt = req.body.prompt;
         const currentDate = new Date();
@@ -144,21 +143,43 @@ app.post('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function
         response.then((resp) => {
             // @ts-expect-error test
             resp.data.on('data', (chunk) => {
-                console.log('Streamed Chunk: ', chunk);
-                res.write(`data: ${chunk} \n\n`);
+                // console.log('Streamed Chunk: ', chunk);
+                // When we get chunk, convert from buffer to string, set it to variable,
+                // then write it to client from GET endpoint.
+                // streamedChunks = chunk;
+                const regex = /(?<=data: ).*/;
+                chunk = chunk.toString('utf-8');
+                chunk = chunk.match(regex)[0];
+                /**
+         * ERROR: Why is it listing every character instead of every object value????
+         */
+                console.log('Chunk:', Object.values(chunk));
+                if (chunk.choices) {
+                    if (chunk.choices[0].delta.content) {
+                        chunk = chunk.choices[0].delta.content;
+                    }
+                    else {
+                        chunk = chunk.choices[0].delta;
+                    }
+                }
+                collectedStringChunks.push(chunk);
+                // res.write(`data: ${chunk} \n\n`);
             });
             // @ts-expect-error test
             resp.data.on('end', () => {
                 console.log('Streaming Complete');
-                res.write('data: [DONE] \n\n');
+                // res.write('data: [DONE] \n\n');
             });
         });
+        res.send(collectedStringChunks);
         // if (response.status !== 200) { throw new Error(); }
     }
     catch (error) {
         console.log('error in POST/api/stream:', error);
     }
 }));
+// let streamedChunks:any;
+const collectedStringChunks = [];
 app.get('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const headers = {
         'Content-Type': 'text/event-stream',
@@ -167,6 +188,8 @@ app.get('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function*
     };
     res.writeHead(200, headers);
     res.write('data: Event stream established! \n\n');
+    console.log('\n\nStreamed chunks: ', collectedStringChunks);
+    res.write(`data: ${collectedStringChunks}\n\n`);
     const client = {
         id: Date.now()
     };
