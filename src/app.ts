@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 const app = express();
 import { config } from 'dotenv';
+import { formatChunk } from './utils/formatChunk';
 config();
 // OpenAI setup
 // import _createCompletion from './utils/createCompletion.js';
@@ -81,7 +82,7 @@ app.post('/api', async (req, res) => {
     // const collectedMessages = [];
     if (response.status !== 200) { throw new Error(); }
     console.log('\n\n--------------------------------------------------------------');
-    console.log('\nOpenAI Response:', response);
+    console.log('\nOpenAI Response:', response.data.choices[0]);
     res.send(response.data.choices[0]);
   } catch (error) {
     console.log('ERROR:\n', error);
@@ -95,26 +96,50 @@ app.post('/api', async (req, res) => {
    * 3. Forward OpenAI response to client. 
    * 4. On [DONE] from OpenAI, close connection to both servers. 
    */
+let prompt = '';
 app.post('/api/stream', async (req, res) => {
   console.log('Request received: ', req.body);
-  // const headers = {
-  //   'Content-Type': 'text/event-stream',
-  //   'Connection': 'keep-alive',
-  //   'Cache-Control': 'no-cache'
-  // };
-  // res.writeHead(200, headers);
   try {
-    const prompt = req.body.prompt;
-    const currentDate = new Date();
-    const day = currentDate.getDate();
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const todaysDate = `${day}/${month}/${year}`;
     /**
      * The 'role' key helps us structure conversations that the AI can start from.
      * Messages with the role of 'assistant' are responses that the AI would give us. This helps
      * us give the AI some context without having to make more than one request.
      */
+    prompt = req.body.prompt;
+    res.send(`\nPrompt received: \n${prompt}`);
+    // if (response.status !== 200) { throw new Error(); }
+  } catch (error) {
+    console.log('error in POST/api/stream:', error);  
+  }
+});
+// let streamedChunks:any;
+const collectedStringChunks: any[] = [];
+const streamedChunk: Record<any, any> = {
+  chunk: ''
+};
+app.get('/api/stream', async (req, res) => {
+  /**
+   * 1. Establish event stream.
+   * 2. Create OpenAI request with prompt from POST.
+   * 3. Feed back the responses. 
+   */
+  const headers = {
+    'Content-Type': 'text/event-stream',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache'
+  };
+  res.writeHead(200, headers);
+  res.write('data: Event stream established! \n\n');
+  const client = {
+    id: Date.now()
+  };
+  try {  
+    const currentDate = new Date();
+    const day = currentDate.getDate();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    const todaysDate = `${day}/${month}/${year}`;
+    console.log('\nPROMPT: ', prompt);
     const response = openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -132,20 +157,18 @@ app.post('/api/stream', async (req, res) => {
       stream:true
     }, {responseType:'stream'});
     response.then((resp) => {
-      // @ts-expect-error test
+    // @ts-expect-error test
       resp.data.on('data', (chunk:any) => {
-        // console.log('Streamed Chunk: ', chunk);
-        // When we get chunk, convert from buffer to string, set it to variable,
-        // then write it to client from GET endpoint.
-        // streamedChunks = chunk;
+      // console.log('Streamed Chunk: ', chunk);
+      // When we get chunk, convert from buffer to string, set it to variable,
+      // then write it to client from GET endpoint.
+      // streamedChunks = chunk;
 
         const regex = /(?<=data: ).*/;
-        chunk = chunk.toString('utf-8');
+        chunk = chunk.toString();
         chunk = chunk.match(regex)[0];
-        /**
- * ERROR: Why is it listing every character instead of every object value????
- */
-        console.log('Chunk:', Object.values(chunk));
+        chunk = JSON.parse(chunk);
+        console.log('Chunk:', chunk);
         if (chunk.choices) {
           if
           (chunk.choices[0].delta.content ){
@@ -154,36 +177,19 @@ app.post('/api/stream', async (req, res) => {
             chunk = chunk.choices[0].delta;
           }
         }
-        collectedStringChunks.push(chunk);
-        // res.write(`data: ${chunk} \n\n`);
+        console.log('\n New Chunk:', chunk);
+        streamedChunk.chunk = chunk;
+        res.write(`data: ${chunk} \n\n`);
       });
       // @ts-expect-error test
       resp.data.on('end', () => {
         console.log('Streaming Complete');
-        // res.write('data: [DONE] \n\n');
+        res.write('data: [DONE] \n\n');
       });
     });
-    res.send(collectedStringChunks);
-    // if (response.status !== 200) { throw new Error(); }
-  } catch (error) {
-    console.log('error in POST/api/stream:', error);  
+  } catch (error){
+    console.error('\nERROR IN GET/api/stream ENDPOINT:' , error);
   }
-});
-// let streamedChunks:any;
-const collectedStringChunks :any[]= [];
-app.get('/api/stream', async (req, res) => {
-  const headers = {
-    'Content-Type': 'text/event-stream',
-    'Connection': 'keep-alive',
-    'Cache-Control': 'no-cache'
-  };
-  res.writeHead(200, headers);
-  res.write('data: Event stream established! \n\n');
-  console.log('\n\nStreamed chunks: ',collectedStringChunks);
-  res.write(`data: ${collectedStringChunks}\n\n`);
-  const client = {
-    id: Date.now()
-  };
   req.on('close', () => {
     console.log(`Client ${client.id} Connection Closed`);
   });
