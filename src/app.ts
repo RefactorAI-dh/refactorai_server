@@ -3,8 +3,8 @@ import { Configuration, OpenAIApi } from 'openai';
 import express from 'express';
 import cors from 'cors';
 const app = express();
+import { systemContext } from './utils/systemContext.js';
 import { config } from 'dotenv';
-import { formatChunk } from './utils/formatChunk';
 config();
 // OpenAI setup
 // import _createCompletion from './utils/createCompletion.js';
@@ -53,11 +53,6 @@ app.post('/api', async (req, res) => {
   try {
     console.log('POST request received');
     console.log('\n\n\nRequest Body: \n',req.body);
-    const currentDate = new Date();
-    const day = currentDate.getDate();
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const todaysDate = `${day}/${month}/${year}`;
     /**
      * The 'role' key helps us structure conversations that the AI can start from.
      * Messages with the role of 'assistant' are responses that the AI would give us. This helps
@@ -67,8 +62,8 @@ app.post('/api', async (req, res) => {
       model: 'gpt-3.5-turbo',
       messages: [
         {
-          role: 'system',
-          content:`You are RefactorAI, a VScode extension created by Danial Hasan and trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}. Your job is to help developers, engineers, and anyone else who programs, refactor/explain/debug their code.` 
+          role: 'user',
+          content:systemContext 
         },
         {
           role: 'user',
@@ -112,8 +107,6 @@ app.post('/api/stream', async (req, res) => {
     console.log('error in POST/api/stream:', error);  
   }
 });
-// let streamedChunks:any;
-const collectedStringChunks: any[] = [];
 const streamedChunk: Record<any, any> = {
   chunk: ''
 };
@@ -134,18 +127,13 @@ app.get('/api/stream', async (req, res) => {
     id: Date.now()
   };
   try {  
-    const currentDate = new Date();
-    const day = currentDate.getDate();
-    const month = currentDate.getMonth() + 1;
-    const year = currentDate.getFullYear();
-    const todaysDate = `${day}/${month}/${year}`;
     console.log('\nPROMPT: ', prompt);
     const response = openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages: [
         {
-          role: 'system',
-          content:`You are RefactorAI, a VScode extension created by Danial Hasan and trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: September 2021. Today's date in DD/MM/YY: ${todaysDate}. Your job is to help developers, engineers, and anyone else who programs, refactor/explain/debug their code.` 
+          role: 'user',
+          content:systemContext 
         },
         {
           role: 'user',
@@ -159,22 +147,24 @@ app.get('/api/stream', async (req, res) => {
     response.then((resp) => {
     // @ts-expect-error test
       resp.data.on('data', (chunk:any) => {
-      // console.log('Streamed Chunk: ', chunk);
-      // When we get chunk, convert from buffer to string, set it to variable,
-      // then write it to client from GET endpoint.
-      // streamedChunks = chunk;
-
         const regex = /(?<=data: ).*/;
         chunk = chunk.toString();
+        // Grab second data object to get first token
+        if (chunk.split('\n').filter(Boolean)[1]) {
+          chunk = chunk.split('\n').filter(Boolean)[1];
+        }
         chunk = chunk.match(regex)[0];
-        chunk = JSON.parse(chunk);
+        if (chunk !== '[DONE]') {
+          chunk = JSON.parse(chunk);
+        }
         console.log('Chunk:', chunk);
         if (chunk.choices) {
           if
-          (chunk.choices[0].delta.content ){
-            chunk = chunk.choices[0].delta.content;
+          (chunk.choices[0].delta.content) {
+            console.log('text: ', chunk.choices[0].delta.content);
+            chunk = chunk.choices[0].delta.content.trim();
           } else {
-            chunk = chunk.choices[0].delta;
+            chunk = chunk.choices[0].delta.trim();
           }
         }
         console.log('\n New Chunk:', chunk);
