@@ -12,7 +12,7 @@ const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
-export default function _createCompletion({ model, prompt, temperature, max_tokens, }) {
+export function _createCompletion({ model, prompt, temperature, max_tokens, }) {
     return __awaiter(this, void 0, void 0, function* () {
         const response = yield openai.createCompletion({
             model,

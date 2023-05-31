@@ -12,7 +12,7 @@ import { Configuration, OpenAIApi } from 'openai';
 import express from 'express';
 import cors from 'cors';
 const app = express();
-import { systemContext } from './utils/systemContext.js';
+import { systemContext, formatTokens } from './utils/index.js';
 import { config } from 'dotenv';
 config();
 // OpenAI setup
@@ -30,7 +30,9 @@ app.get('/', (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         console.log(error);
-        res.status(502).send('There was an issue with the RefactorAI API. Please try again later.');
+        res
+            .status(502)
+            .send('There was an issue with the RefactorAI API. Please try again later.');
     }
 }));
 app.get('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -70,11 +72,11 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             messages: [
                 {
                     role: 'user',
-                    content: systemContext
+                    content: systemContext,
                 },
                 {
                     role: 'user',
-                    content: req.body.prompt
+                    content: req.body.prompt,
                 },
             ],
             temperature: 0.5,
@@ -95,11 +97,11 @@ app.post('/api', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 }));
 /**
-   * 1. Client establishes EventSource connection to this server.
-   * 2. Server receives request, sends request to OpenAI with stream:true
-   * 3. Forward OpenAI response to client.
-   * 4. On [DONE] from OpenAI, close connection to both servers.
-   */
+ * 1. Client establishes EventSource connection to this server.
+ * 2. Server receives request, sends request to OpenAI with stream:true
+ * 3. Forward OpenAI response to client.
+ * 4. On [DONE] from OpenAI, close connection to both servers.
+ */
 let prompt = '';
 app.post('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Request received: ', req.body);
@@ -117,9 +119,6 @@ app.post('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function
         console.log('error in POST/api/stream:', error);
     }
 }));
-const streamedChunk = {
-    chunk: ''
-};
 app.get('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     /**
      * 1. Establish event stream.
@@ -128,35 +127,42 @@ app.get('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function*
      */
     const headers = {
         'Content-Type': 'text/event-stream',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache'
+        Connection: 'keep-alive',
+        'Cache-Control': 'no-cache',
     };
     res.writeHead(200, headers);
     res.write('data: Event stream established! \n\n');
     const client = {
-        id: Date.now()
+        id: Date.now(),
     };
     try {
+        let allFormattedTokens = '';
+        const tokens = [];
         console.log('\nPROMPT: ', prompt);
         const response = openai.createChatCompletion({
             model: 'gpt-3.5-turbo',
             messages: [
                 {
                     role: 'user',
-                    content: systemContext
+                    content: systemContext,
                 },
                 {
                     role: 'user',
-                    content: prompt
+                    content: prompt,
                 },
             ],
             temperature: 0.5,
             max_tokens: 3000,
-            stream: true
+            stream: true,
         }, { responseType: 'stream' });
         response.then((resp) => {
             // @ts-expect-error test
             resp.data.on('data', (chunk) => {
+                /**
+                 * Grab chunk, place chunk in tokens array, format array of
+                 * tokens once its length = 4, send formatted string sentence.
+                 * If length > 4, clear tokens array.
+                 */
                 const regex = /(?<=data: ).*/;
                 chunk = chunk.toString();
                 // Grab second data object to get first token
@@ -167,23 +173,38 @@ app.get('/api/stream', (req, res) => __awaiter(void 0, void 0, void 0, function*
                 if (chunk !== '[DONE]') {
                     chunk = JSON.parse(chunk);
                 }
-                console.log('Chunk:', chunk);
+                console.log('\n\nChunk:', chunk);
                 if (chunk.choices) {
                     if (chunk.choices[0].delta.content) {
                         console.log('text: ', chunk.choices[0].delta.content);
-                        chunk = chunk.choices[0].delta.content.trim();
+                        chunk = chunk.choices[0].delta.content;
                     }
                     else {
-                        chunk = chunk.choices[0].delta.trim();
+                        chunk = chunk.choices[0].delta;
                     }
                 }
-                console.log('\n New Chunk:', chunk);
-                streamedChunk.chunk = chunk;
-                res.write(`data: ${chunk} \n\n`);
+                let formattedTokens;
+                // Tokens list not full, don't format yet
+                if (tokens.length < 5 && chunk !== '[DONE]') {
+                    tokens.push(chunk);
+                    return;
+                }
+                else {
+                    // Tokens list is full, format and send to client
+                    formattedTokens = formatTokens(tokens);
+                    allFormattedTokens += formattedTokens;
+                    console.log('Formatted tokens:\n ', formattedTokens);
+                    res.write(`data: ${formattedTokens} \n\n`);
+                    tokens.length = 0;
+                    if (chunk === '[DONE]')
+                        return;
+                    tokens.push(chunk);
+                }
             });
             // @ts-expect-error test
             resp.data.on('end', () => {
-                console.log('Streaming Complete');
+                console.log('Streaming Complete. All formatted tokens:\n');
+                console.log(allFormattedTokens);
                 res.write('data: [DONE] \n\n');
             });
         });

@@ -23,5 +23,5 @@
     "semi": ["error", "always"],
     "no-unused-vars": "error"
   },
-  "ignorePatterns" : ["package.json", "package-lock.json"]
+  "ignorePatterns" : ["package.json", "package-lock.json", "prettierrc.json"]
 }
