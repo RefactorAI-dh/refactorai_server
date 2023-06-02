@@ -5,7 +5,6 @@ import cors from 'cors';
 const app = express();
 import { systemContext, formatTokens } from './utils/index.js';
 import { config } from 'dotenv';
-import { format } from 'path';
 config();
 // OpenAI setup
 // import _createCompletion from './utils/createCompletion.js';
